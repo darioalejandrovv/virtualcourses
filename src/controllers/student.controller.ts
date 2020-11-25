@@ -4,26 +4,32 @@ import {
   Filter,
   FilterExcludingWhere,
   repository,
-  Where,
+  Where
 } from '@loopback/repository';
 import {
-  post,
-  param,
-  get,
-  getModelSchemaRef,
-  patch,
+  del, get,
+  getModelSchemaRef, param,
+
+
+  patch, post,
+
+
+
+
   put,
-  del,
-  requestBody,
+
+  requestBody
 } from '@loopback/rest';
 import {Student} from '../models';
-import {StudentRepository} from '../repositories';
+import {StudentRepository, UserRepository} from '../repositories';
 
 export class StudentController {
   constructor(
     @repository(StudentRepository)
-    public studentRepository : StudentRepository,
-  ) {}
+    public studentRepository: StudentRepository,
+    @repository(UserRepository)
+    public userRepository: UserRepository,
+  ) { }
 
   @post('/student', {
     responses: {
@@ -46,7 +52,18 @@ export class StudentController {
     })
     student: Omit<Student, 'id'>,
   ): Promise<Student> {
-    return this.studentRepository.create(student);
+    let s = await this.studentRepository.create(student);
+    let u = {
+      userName: s.document,
+      password: s.document,
+      role: 1,
+      studentId: s.id
+    };
+
+    let user = await this.userRepository.create(u);
+    user.password = '';
+    s.user = user;
+    return s;
   }
 
   @get('/student/count', {
