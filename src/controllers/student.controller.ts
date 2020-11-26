@@ -20,8 +20,11 @@ import {
 
   requestBody
 } from '@loopback/rest';
+import {ServicesKeys as keys} from '../keys/services-keys';
 import {Student} from '../models';
 import {StudentRepository, UserRepository} from '../repositories';
+import {EncryptDecrypt} from '../services/encrypt-decrypt.services';
+
 
 export class StudentController {
   constructor(
@@ -53,9 +56,11 @@ export class StudentController {
     student: Omit<Student, 'id'>,
   ): Promise<Student> {
     let s = await this.studentRepository.create(student);
+    let password1 = new EncryptDecrypt(keys.MD5).Encrypt(s.document);
+    let password2 = new EncryptDecrypt(keys.MD5).Encrypt(password1);
     let u = {
       userName: s.document,
-      password: s.document,
+      password: password2,
       role: 1,
       studentId: s.id
     };
@@ -174,6 +179,12 @@ export class StudentController {
     @param.path.string('id') id: string,
     @requestBody() student: Student,
   ): Promise<void> {
+
+    let u = await this.userRepository.findOne({where: {studentId: student.id}})
+    if (u) {
+      u.userName = student.document;
+      await this.userRepository.replaceById(u.id, u);
+    }
     await this.studentRepository.replaceById(id, student);
   }
 
